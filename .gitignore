@@ -1,0 +1,25 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Environment variables (CRITICAL: Never upload your MONGO_URI or JWT_SECRET)
+.env
+.env.test
+.env.local
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# IDE Folders
+.vscode/
+.idea/
+
+# Uploads folder (Ignore actual images, but keep the folder if you want)
+src/uploads/*
+!src/uploads/.gitkeep

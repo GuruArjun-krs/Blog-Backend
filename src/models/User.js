@@ -3,7 +3,10 @@ const bcrypt = require("bcryptjs");
 
 const userSchema = mongoose.Schema(
   {
-    name: { type: String, required: [true, "Please add a name"] },
+    name: {
+      type: String,
+      required: [true, "Please add a name"],
+    },
     email: {
       type: String,
       required: [true, "Please add an email"],
@@ -15,9 +18,14 @@ const userSchema = mongoose.Schema(
       required: [true, "Please add a password"],
       minlength: 6,
     },
-    isAdmin: { type: Boolean, default: false },
+    isAdmin: {
+      type: Boolean,
+      default: false,
+    },
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+  },
 );
 
 userSchema.pre("save", async function (next) {

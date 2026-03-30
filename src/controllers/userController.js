@@ -37,18 +37,37 @@ exports.loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
   const user = await User.findOne({ email });
 
-  if (user && (await user.matchPassword(password))) {
-    res.status(200).json({
-      success: true,
-      data: {
-        _id: user._id,
-        name: user.name,
-        isAdmin: user.isAdmin,
-        token: generateToken(user._id, user.isAdmin),
-      },
-    });
-  } else {
+  if (!user) {
     res.status(401);
-    throw new Error("Invalid email or password");
+    throw new Error("User not registered");
   }
+
+  const isMatch = await user.matchPassword(password);
+  if (!isMatch) {
+    res.status(401);
+    throw new Error("Password entered is wrong");
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Login successful",
+    data: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      isAdmin: user.isAdmin,
+      token: generateToken(user._id, user.isAdmin),
+    },
+  });
+});
+
+exports.getUsers = asyncHandler(async (req, res) => {
+  const users = await User.find({}).select("-password");
+
+  res.status(200).json({
+    success: true,
+    message: "Users list fetched successfully",
+    count: users.length,
+    data: users,
+  });
 });

@@ -7,13 +7,31 @@ const postSchema = mongoose.Schema(
       required: true,
       ref: "User",
     },
-    title: { type: String, required: [true, "Please add a title"] },
-    content: { type: String, required: [true, "Please add content"] },
-    image: { type: String, default: "default-blog.jpg" },
-    category: { type: String, required: [true, "Please add a category"] },
-    isPublished: { type: Boolean, default: false },
+    title: {
+      type: String,
+      required: [true, "Please add a title"],
+    },
+    content: {
+      type: String,
+      required: [true, "Please add content"],
+    },
+    image: {
+      type: String,
+      default: "default-blog.jpg",
+    },
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      required: [true, "Please select a category"],
+    },
+    isPublished: {
+      type: Boolean,
+      default: false,
+    },
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+  },
 );
 
 module.exports = mongoose.model("Post", postSchema);

@@ -2,14 +2,13 @@ const asyncHandler = require("express-async-handler");
 const Post = require("../models/Post");
 
 exports.getPosts = asyncHandler(async (req, res) => {
-  const posts = await Post.find({ isPublished: true })
-    .populate("user", "name email")
+  const posts = await Post.find()
+    .populate("createdBy", "name")
     .populate("category", "name")
     .sort({ createdAt: -1 });
 
   res.status(200).json({
     success: true,
-    message: "Posts fetched successfully",
     count: posts.length,
     data: posts,
   });
@@ -23,32 +22,41 @@ exports.createPost = asyncHandler(async (req, res) => {
     throw new Error("Please provide title, content, and category");
   }
 
+  if (!req.user) {
+    res.status(401);
+    throw new Error("User not found, please login again");
+  }
+
   const post = await Post.create({
     title,
     content,
     category,
     isPublished: isPublished || false,
-    user: req.user.id,
+    createdBy: req.user._id,
   });
 
   res.status(201).json({
     success: true,
-    message: "Blog post created successfully",
     data: post,
   });
 });
 
 exports.updatePost = asyncHandler(async (req, res) => {
-  let post = await Post.findById(req.params.id);
+  if (!req.user) {
+    res.status(401);
+    throw new Error("Not authorized, user missing");
+  }
+
+  let post = await Post.findOne({ _id: req.params.id, deletedAt: null });
 
   if (!post) {
     res.status(404);
     throw new Error("Post not found");
   }
 
-  if (post.user.toString() !== req.user.id && !req.user.isAdmin) {
+  if (post.createdBy.toString() !== req.user._id.toString()) {
     res.status(403);
-    throw new Error("Access denied: You can only update your own posts");
+    throw new Error("Access denied: Only the creator can edit this post");
   }
 
   post = await Post.findByIdAndUpdate(req.params.id, req.body, {
@@ -58,29 +66,37 @@ exports.updatePost = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    message: "Post updated successfully",
     data: post,
   });
 });
 
 exports.deletePost = asyncHandler(async (req, res) => {
-  const post = await Post.findById(req.params.id);
+  if (!req.user) {
+    res.status(401);
+    throw new Error("Not authorized, user missing");
+  }
+
+  const post = await Post.findOne({ _id: req.params.id, deletedAt: null });
 
   if (!post) {
     res.status(404);
     throw new Error("Post not found");
   }
 
-  if (post.user.toString() !== req.user.id && !req.user.isAdmin) {
+  const isOwner = post.createdBy.toString() === req.user._id.toString();
+  const isAdmin = req.user.isAdmin === true;
+
+  if (!isOwner && !isAdmin) {
     res.status(403);
-    throw new Error("Access denied: You can only delete your own posts");
+    throw new Error("Access denied: Insufficient permissions to delete");
   }
 
-  await post.deleteOne();
+  post.deletedAt = Date.now();
+  await post.save();
 
   res.status(200).json({
     success: true,
-    message: "Post has been removed",
+    message: "Post has been moved to trash",
     data: {},
   });
 });

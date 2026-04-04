@@ -2,11 +2,6 @@ const mongoose = require("mongoose");
 
 const postSchema = mongoose.Schema(
   {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      ref: "User",
-    },
     title: {
       type: String,
       required: [true, "Please add a title"],
@@ -17,7 +12,8 @@ const postSchema = mongoose.Schema(
     },
     image: {
       type: String,
-      default: "default-blog.jpg",
+      default:
+        "https://images.unsplash.com/photo-1499750310107-5fef28a66643?q=80&w=1000",
     },
     category: {
       type: mongoose.Schema.Types.ObjectId,
@@ -26,12 +22,25 @@ const postSchema = mongoose.Schema(
     },
     isPublished: {
       type: Boolean,
-      default: false,
+      default: true,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
     },
   },
   {
     timestamps: true,
   },
 );
+
+postSchema.pre(/^find/, function () {
+  this.where({ deletedAt: null });
+});
 
 module.exports = mongoose.model("Post", postSchema);

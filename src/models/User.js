@@ -7,9 +7,6 @@ const userSchema = mongoose.Schema(
       type: String,
       required: [true, "Please add a name"],
     },
-    nickname: {
-      type: String,
-    },
     email: {
       type: String,
       required: [true, "Please add an email"],
@@ -21,40 +18,9 @@ const userSchema = mongoose.Schema(
       required: [true, "Please add a password"],
       minlength: 6,
     },
-    gender: {
-      type: String,
-      enum: ["Male", "Female", "Other", "Prefer not to say"],
-    },
-    dob: {
-      type: Date,
-    },
-    bio: {
-      type: String,
-      maxlength: [200, "Bio cannot be more than 200 characters"],
-    },
-    profileImg: {
-      type: String,
-      default: "default-avatar.png",
-    },
     isAdmin: {
       type: Boolean,
       default: false,
-    },
-    // Soft Delete & Audit Fields
-    isDeleted: {
-      type: Boolean,
-      default: false,
-    },
-    deletedAt: {
-      type: Date,
-    },
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
-    deletedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
     },
   },
   {

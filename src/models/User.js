@@ -28,7 +28,8 @@ const userSchema = mongoose.Schema(
     },
     profileImg: {
       type: String,
-      default: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=800&q=80",
+      default:
+        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=800&q=80",
     },
     dob: {
       type: Date,
@@ -58,9 +59,9 @@ const userSchema = mongoose.Schema(
   },
 );
 
-userSchema.pre("save", async function (next) {
+userSchema.pre("save", async function () {
   if (!this.isModified("password")) {
-    next();
+    return;
   }
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);

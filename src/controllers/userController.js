@@ -76,10 +76,11 @@ exports.getUserById = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id).select("-password");
 
   if (!user) {
-    res.status(404);
-    throw new Error("User not found");
+    return res.status(404).json({
+      success: false,
+      message: `User with ID ${req.params.id} does not exist in the connected database.`,
+    });
   }
-
   res.status(200).json({ success: true, data: user });
 });
 
@@ -91,7 +92,6 @@ exports.updateUser = asyncHandler(async (req, res) => {
     throw new Error("User not found");
   }
 
-  // Define fields allowed to be updated
   const fieldsToUpdate = [
     "name",
     "bio",
@@ -126,7 +126,7 @@ exports.deleteUser = asyncHandler(async (req, res) => {
   }
 
   user.isDeleted = true;
-  user.deletedBy = req.user?._id; // Requires auth middleware to be active
+  user.deletedBy = req.user?._id;
   await user.save();
 
   res.status(200).json({

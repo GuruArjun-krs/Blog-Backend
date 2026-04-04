@@ -71,3 +71,66 @@ exports.getUsers = asyncHandler(async (req, res) => {
     data: users,
   });
 });
+
+exports.getUserById = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id).select("-password");
+
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+
+  res.status(200).json({ success: true, data: user });
+});
+
+exports.updateUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+
+  // Define fields allowed to be updated
+  const fieldsToUpdate = [
+    "name",
+    "bio",
+    "profileImg",
+    "dob",
+    "gender",
+    "nickname",
+    "isAdmin",
+  ];
+
+  fieldsToUpdate.forEach((field) => {
+    if (req.body[field] !== undefined) {
+      user[field] = req.body[field];
+    }
+  });
+
+  const updatedUser = await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: "User updated successfully",
+    data: updatedUser,
+  });
+});
+
+exports.deleteUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+
+  user.isDeleted = true;
+  user.deletedBy = req.user?._id; // Requires auth middleware to be active
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: "User soft-deleted successfully",
+  });
+});

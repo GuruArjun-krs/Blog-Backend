@@ -23,3 +23,5 @@ Thumbs.db
 # Uploads folder (Ignore actual images, but keep the folder if you want)
 src/uploads/*
 !src/uploads/.gitkeep
+.vercel
+.env*.local

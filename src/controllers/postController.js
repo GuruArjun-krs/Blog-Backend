@@ -116,3 +116,34 @@ exports.getPostById = asyncHandler(async (req, res) => {
     data: post,
   });
 });
+
+exports.getPostsByUserId = asyncHandler(async (req, res) => {
+  const userId = req.params.userId;
+
+  const posts = await Post.find({
+    createdBy: userId,
+    deletedAt: null,
+  })
+    .populate("createdBy", "name")
+    .populate("category", "name")
+    .sort({ createdAt: -1 });
+
+  res.status(200).json({
+    success: true,
+    count: posts.length,
+    data: posts,
+  });
+});
+
+exports.getMyPosts = asyncHandler(async (req, res) => {
+  const posts = await Post.find({
+    createdBy: req.user._id,
+    deletedAt: null,
+  }).sort({ createdAt: -1 });
+
+  res.status(200).json({
+    success: true,
+    count: posts.length,
+    data: posts,
+  });
+});

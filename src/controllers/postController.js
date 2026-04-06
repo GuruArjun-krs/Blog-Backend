@@ -31,7 +31,7 @@ exports.createPost = asyncHandler(async (req, res) => {
     title,
     content,
     category,
-    isPublished: isPublished || false,
+    isPublished: isPublished,
     createdBy: req.user._id,
   });
 
@@ -98,5 +98,21 @@ exports.deletePost = asyncHandler(async (req, res) => {
     success: true,
     message: "Post has been moved to trash",
     data: {},
+  });
+});
+
+exports.getPostById = asyncHandler(async (req, res) => {
+  const post = await Post.findOne({ _id: req.params.id, deletedAt: null })
+    .populate("createdBy", "name")
+    .populate("category", "name");
+
+  if (!post) {
+    res.status(404);
+    throw new Error("Post not found");
+  }
+
+  res.status(200).json({
+    success: true,
+    data: post,
   });
 });

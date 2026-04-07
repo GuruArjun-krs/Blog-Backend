@@ -40,6 +40,7 @@ const userSchema = mongoose.Schema(
     },
     nickname: {
       type: String,
+      unique: true,
     },
     isDeleted: {
       type: Boolean,

@@ -7,12 +7,21 @@ const {
   updateUser,
   deleteUser,
   getUserById,
+  updateProfileImage,
 } = require("../controllers/userController");
-// const { protect, admin } = require("../middleware/authMiddleware"); // use this when u need to restrict list based on roles
+const { upload } = require("../config/cloudinary");
+const { protect } = require("../middleware/authMiddleware");
 
 router.post("/register", registerUser);
 router.post("/login", loginUser);
+
 router.get("/", getUsers);
+router.put(
+  "/profile-image",
+  protect,
+  upload.single("image"),
+  updateProfileImage,
+);
 router.route("/:id").get(getUserById).put(updateUser).delete(deleteUser);
 
 module.exports = router;

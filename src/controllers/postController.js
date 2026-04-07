@@ -118,7 +118,7 @@ exports.getPostById = asyncHandler(async (req, res) => {
 });
 
 exports.getPostsByUserId = asyncHandler(async (req, res) => {
-  const userId = req.params.userId;
+  const userId = req.params.id;
 
   const posts = await Post.find({
     createdBy: userId,
@@ -137,9 +137,12 @@ exports.getPostsByUserId = asyncHandler(async (req, res) => {
 
 exports.getMyPosts = asyncHandler(async (req, res) => {
   const posts = await Post.find({
-    createdBy: req.user._id,
+    createdBy: req.user._id, // Uses the ID from the protect middleware
     deletedAt: null,
-  }).sort({ createdAt: -1 });
+  })
+    .populate("createdBy", "name") // Add this
+    .populate("category", "name") // Add this
+    .sort({ createdAt: -1 });
 
   res.status(200).json({
     success: true,

@@ -1,7 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
-const cloudinary = require("../config/cloudinary");
+const { cloudinary } = require("../config/cloudinary");
 
 const generateToken = (id, isAdmin) => {
   return jwt.sign({ id, isAdmin }, process.env.JWT_SECRET, {
@@ -150,18 +150,16 @@ exports.updateProfileImage = asyncHandler(async (req, res) => {
   }
 
   if (user.profileImg && user.profileImg.includes("cloudinary")) {
-    const publicId = user.profileImg.split("/").pop().split(".")[0];
+    const filename = user.profileImg.split("/").pop();
+    const publicId = filename.split(".")[0];
     cloudinary.uploader
       .destroy(`user_profiles/${publicId}`)
       .catch((err) => console.log("Cloudinary Delete Error:", err));
   }
 
-  const imageUrl = req.file.secure_url || req.file.url;
-
+  const imageUrl = req.file.path || req.file.secure_url || req.file.url;
   user.profileImg = imageUrl;
-
   const updatedUser = await user.save();
-
   res.status(200).json({
     success: true,
     message: "Profile image updated successfully",

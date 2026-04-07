@@ -158,13 +158,10 @@ exports.toggleFavorite = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error("Post not found");
   }
-
-  const isFavorited = post.favorites.includes(req.user._id);
+  const isFavorited = post.favorites.some((id) => id.equals(req.user._id));
 
   if (isFavorited) {
-    post.favorites = post.favorites.filter(
-      (userId) => userId.toString() !== req.user._id.toString(),
-    );
+    post.favorites = post.favorites.filter((id) => !id.equals(req.user._id));
   } else {
     post.favorites.push(req.user._id);
   }
@@ -180,12 +177,18 @@ exports.toggleFavorite = asyncHandler(async (req, res) => {
 });
 
 exports.getMyFavorites = asyncHandler(async (req, res) => {
+  if (!req.user) {
+    res.status(401);
+    throw new Error("Not authorized");
+  }
+
   const posts = await Post.find({
     favorites: req.user._id,
     deletedAt: null,
   })
     .populate("createdBy", "name")
-    .populate("category", "name");
+    .populate("category", "name")
+    .sort({ createdAt: -1 });
 
   res.status(200).json({
     success: true,

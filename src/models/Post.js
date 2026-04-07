@@ -24,6 +24,11 @@ const postSchema = mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    favorites: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "User",
+      default: [],
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

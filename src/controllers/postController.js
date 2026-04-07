@@ -137,12 +137,55 @@ exports.getPostsByUserId = asyncHandler(async (req, res) => {
 
 exports.getMyPosts = asyncHandler(async (req, res) => {
   const posts = await Post.find({
-    createdBy: req.user._id, // Uses the ID from the protect middleware
+    createdBy: req.user._id,
     deletedAt: null,
   })
-    .populate("createdBy", "name") // Add this
-    .populate("category", "name") // Add this
+    .populate("createdBy", "name")
+    .populate("category", "name")
     .sort({ createdAt: -1 });
+
+  res.status(200).json({
+    success: true,
+    count: posts.length,
+    data: posts,
+  });
+});
+
+exports.toggleFavorite = asyncHandler(async (req, res) => {
+  const post = await Post.findById(req.params.id);
+
+  if (!post) {
+    res.status(404);
+    throw new Error("Post not found");
+  }
+
+  const isFavorited = post.favorites.includes(req.user._id);
+
+  if (isFavorited) {
+    post.favorites = post.favorites.filter(
+      (userId) => userId.toString() !== req.user._id.toString(),
+    );
+  } else {
+    post.favorites.push(req.user._id);
+  }
+
+  await post.save();
+
+  res.status(200).json({
+    success: true,
+    isFavorited: !isFavorited,
+    favoriteCount: post.favorites.length,
+    data: post.favorites,
+  });
+});
+
+exports.getMyFavorites = asyncHandler(async (req, res) => {
+  const posts = await Post.find({
+    favorites: req.user._id,
+    deletedAt: null,
+  })
+    .populate("createdBy", "name")
+    .populate("category", "name");
 
   res.status(200).json({
     success: true,

@@ -12,13 +12,14 @@ const {
   toggleFavorite,
 } = require("../controllers/postController");
 const { protect } = require("../middleware/authMiddleware");
+const { upload } = require("../config/cloudinary");
 
 router.get("/", getPosts);
-router.post("/", protect, createPost);
+router.post("/", protect, upload.single("image"), createPost);
 router.get("/me", protect, getMyPosts);
 router.get("/user/:id", getPostsByUserId);
 router.get("/:id", getPostById);
-router.put("/:id", protect, updatePost);
+router.put("/:id", protect, upload.single("image"), updatePost);
 router.delete("/:id", protect, deletePost);
 
 router.get("/favorites/me", protect, getMyFavorites); // Get list of favorited posts

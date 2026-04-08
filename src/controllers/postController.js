@@ -1,5 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const Post = require("../models/Post");
+const { cloudinary } = require("../config/cloudinary");
 
 exports.getPosts = asyncHandler(async (req, res) => {
   const posts = await Post.find()
@@ -27,17 +28,26 @@ exports.createPost = asyncHandler(async (req, res) => {
     throw new Error("User not found, please login again");
   }
 
+  let postImageUrl;
+  if (req.file) {
+    postImageUrl = req.file.path || req.file.secure_url;
+  }
+
   const post = await Post.create({
     title,
     content,
-    category,
-    isPublished: isPublished,
+    category, 
+    isPublished: isPublished === 'true' || isPublished === true,
+    image: postImageUrl,
     createdBy: req.user._id,
   });
 
+  const populatedPost = await Post.findById(post._id).populate("category", "name");
+
   res.status(201).json({
     success: true,
-    data: post,
+    message: "Post created successfully",
+    data: populatedPost,
   });
 });
 
@@ -59,14 +69,28 @@ exports.updatePost = asyncHandler(async (req, res) => {
     throw new Error("Access denied: Only the creator can edit this post");
   }
 
-  post = await Post.findByIdAndUpdate(req.params.id, req.body, {
+  if (req.file) {
+    if (post.image && post.image.includes("cloudinary")) {
+      const filename = post.image.split("/").pop();
+      const publicId = filename.split(".")[0];
+      
+      cloudinary.uploader
+        .destroy(`user_profiles/${publicId}`) 
+        .catch((err) => console.log("Cloudinary Delete Error:", err));
+    }
+    
+    req.body.image = req.file.path || req.file.secure_url;
+  }
+
+  const updatedPost = await Post.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true,
-  });
+  }).populate("category", "name");
 
   res.status(200).json({
     success: true,
-    data: post,
+    message: "Post updated successfully",
+    data: updatedPost,
   });
 });
 

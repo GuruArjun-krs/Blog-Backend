@@ -2,6 +2,7 @@ const asyncHandler = require("express-async-handler");
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const { cloudinary } = require("../config/cloudinary");
+const { admin, db } = require("../config/firebase");
 
 const generateToken = (id, isAdmin) => {
   return jwt.sign({ id, isAdmin }, process.env.JWT_SECRET, {
@@ -21,16 +22,29 @@ exports.registerUser = asyncHandler(async (req, res) => {
   const user = await User.create({ name, email, password });
 
   if (user) {
-    res.status(201).json({
-      success: true,
-      message: "User registered successfully",
-      data: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        token: generateToken(user._id, user.isAdmin),
-      },
-    });
+    try {
+      await admin.auth().createUser({
+        uid: user._id.toString(),
+        email: email,
+        password: password,
+        displayName: name,
+      });
+
+      res.status(201).json({
+        success: true,
+        message: "User registered successfully in MongoDB and Firebase",
+        data: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          token: generateToken(user._id, user.isAdmin),
+        },
+      });
+    } catch (firebaseError) {
+      await User.findByIdAndDelete(user._id);
+      res.status(500);
+      throw new Error(`Firebase registration failed: ${firebaseError.message}`);
+    }
   }
 });
 
@@ -38,16 +52,12 @@ exports.loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
   const user = await User.findOne({ email });
 
-  if (!user) {
+  if (!user || !(await user.matchPassword(password))) {
     res.status(401);
-    throw new Error("User not registered");
+    throw new Error("Invalid email or password");
   }
 
-  const isMatch = await user.matchPassword(password);
-  if (!isMatch) {
-    res.status(401);
-    throw new Error("Password entered is wrong");
-  }
+  const firebaseToken = await admin.auth().createCustomToken(user._id.toString());
 
   res.status(200).json({
     success: true,
@@ -56,8 +66,8 @@ exports.loginUser = asyncHandler(async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
-      isAdmin: user.isAdmin,
-      token: generateToken(user._id, user.isAdmin),
+      token: generateToken(user._id, user.isAdmin), 
+      firebaseToken: firebaseToken,
     },
   });
 });
@@ -110,6 +120,13 @@ exports.updateUser = asyncHandler(async (req, res) => {
   });
 
   const updatedUser = await user.save();
+  const firebaseUpdate = {};
+    if (req.body.name) firebaseUpdate.displayName = req.body.name;
+    if (req.body.profileImg) firebaseUpdate.photoURL = req.body.profileImg;
+
+    if (Object.keys(firebaseUpdate).length > 0) {
+      await admin.auth().updateUser(user._id.toString(), firebaseUpdate);
+  }
 
   res.status(200).json({
     success: true,
@@ -168,4 +185,58 @@ exports.updateProfileImage = asyncHandler(async (req, res) => {
       profileImg: updatedUser.profileImg,
     },
   });
+});
+
+exports.createChatRoom = asyncHandler(async (req, res) => {
+  const { receiverId } = req.body;
+  const senderId = req.user._id.toString();
+  const targetId = receiverId.toString();
+
+  if (!receiverId) {
+    res.status(400);
+    throw new Error("Receiver ID is required");
+  }
+
+  const roomId = [senderId, targetId].sort().join("_");
+
+  const roomRef = db.collection("rooms").doc(roomId);
+  const doc = await roomRef.get();
+
+  if (!doc.exists) {
+    await roomRef.set({
+      participants: [senderId, targetId],
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      lastMessage: "",
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      participantIds: {
+        [senderId]: true,
+        [targetId]: true
+      }
+    });
+  }
+
+  res.status(200).json({ 
+    success: true, 
+    data: { roomId } 
+  });
+});
+
+exports.getChatHistory = asyncHandler(async (req, res) => {
+  const { roomId } = req.params;
+  const limit = parseInt(req.query.limit) || 20;
+
+  // Query Firestore via Admin SDK
+  const messagesSnapshot = await db.collection("rooms")
+    .doc(roomId)
+    .collection("messages")
+    .orderBy("createdAt", "desc")
+    .limit(limit)
+    .get();
+
+  const messages = messagesSnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+
+  res.status(200).json({ success: true, data: messages });
 });

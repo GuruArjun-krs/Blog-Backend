@@ -8,6 +8,7 @@ const {
   deleteUser,
   getUserById,
   updateProfileImage,
+  createChatRoom
 } = require("../controllers/userController");
 const { upload } = require("../config/cloudinary");
 const { protect } = require("../middleware/authMiddleware");
@@ -23,5 +24,6 @@ router.put(
   updateProfileImage,
 );
 router.route("/:id").get(getUserById).put(updateUser).delete(deleteUser);
+router.post("/rooms", protect, createChatRoom)
 
 module.exports = router;

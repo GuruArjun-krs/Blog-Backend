@@ -1,76 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const User = require("../models/User");
-const jwt = require("jsonwebtoken");
 const { cloudinary } = require("../config/cloudinary");
 const { admin, db } = require("../config/firebase");
-
-const generateToken = (id, isAdmin) => {
-  return jwt.sign({ id, isAdmin }, process.env.JWT_SECRET, {
-    expiresIn: "30d",
-  });
-};
-
-exports.registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password } = req.body;
-
-  const userExists = await User.findOne({ email });
-  if (userExists) {
-    res.status(400);
-    throw new Error("User already exists");
-  }
-
-  const user = await User.create({ name, email, password });
-
-  if (user) {
-    try {
-      await admin.auth().createUser({
-        uid: user._id.toString(),
-        email: email,
-        password: password,
-        displayName: name,
-      });
-
-      res.status(201).json({
-        success: true,
-        message: "User registered successfully in MongoDB and Firebase",
-        data: {
-          _id: user._id,
-          name: user.name,
-          email: user.email,
-          token: generateToken(user._id, user.isAdmin),
-        },
-      });
-    } catch (firebaseError) {
-      await User.findByIdAndDelete(user._id);
-      res.status(500);
-      throw new Error(`Firebase registration failed: ${firebaseError.message}`);
-    }
-  }
-});
-
-exports.loginUser = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
-  const user = await User.findOne({ email });
-
-  if (!user || !(await user.matchPassword(password))) {
-    res.status(401);
-    throw new Error("Invalid email or password");
-  }
-
-  const firebaseToken = await admin.auth().createCustomToken(user._id.toString());
-
-  res.status(200).json({
-    success: true,
-    message: "Login successful",
-    data: {
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      token: generateToken(user._id, user.isAdmin), 
-      firebaseToken: firebaseToken,
-    },
-  });
-});
 
 exports.getUsers = asyncHandler(async (req, res) => {
   const users = await User.find({}).select("-password").lean();

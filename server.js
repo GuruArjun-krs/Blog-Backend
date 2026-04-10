@@ -18,6 +18,7 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+app.use("/api/auth",require('./src/routes/authRoutes'))
 app.use("/api/users", require("./src/routes/userRoutes"));
 app.use("/api/posts", require("./src/routes/postRoutes"));
 app.use("/api/categories", require("./src/routes/categoryRoutes"));

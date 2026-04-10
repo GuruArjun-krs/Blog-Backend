@@ -1,8 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const {
-  registerUser,
-  loginUser,
   getUsers,
   updateUser,
   deleteUser,
@@ -13,17 +11,18 @@ const {
 const { upload } = require("../config/cloudinary");
 const { protect } = require("../middleware/authMiddleware");
 
-router.post("/register", registerUser);
-router.post("/login", loginUser);
-
 router.get("/", getUsers);
 router.put(
   "/profile-image",
   protect,
   upload.single("image"),
-  updateProfileImage,
+  updateProfileImage
 );
-router.route("/:id").get(getUserById).put(updateUser).delete(deleteUser);
-router.post("/rooms", protect, createChatRoom)
+router.post("/rooms", protect, createChatRoom);
+router
+  .route("/:id")
+  .get(protect, getUserById)    
+  .put(protect, updateUser)
+  .delete(protect, deleteUser);
 
 module.exports = router;

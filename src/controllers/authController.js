@@ -5,7 +5,7 @@ const { admin } = require("../config/firebase");
 
 const generateToken = (id, isAdmin) => {
     return jwt.sign({ id, isAdmin }, process.env.JWT_SECRET, {
-      expiresIn: "1m",
+      expiresIn: "30m",
     });
   };
 

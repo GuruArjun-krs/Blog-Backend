@@ -121,34 +121,51 @@ exports.updateProfileImage = asyncHandler(async (req, res) => {
 exports.createChatRoom = asyncHandler(async (req, res) => {
   const { receiverId } = req.body;
   const senderId = req.user._id.toString();
-  const targetId = receiverId.toString();
 
   if (!receiverId) {
     res.status(400);
     throw new Error("Receiver ID is required");
   }
 
+  const targetId = receiverId.toString();
+
+  if (senderId === targetId) {
+    res.status(400);
+    throw new Error("You cannot create a chat room with yourself");
+  }
+
   const roomId = [senderId, targetId].sort().join("_");
 
   const roomRef = db.collection("rooms").doc(roomId);
+
   const doc = await roomRef.get();
 
-  if (!doc.exists) {
-    await roomRef.set({
-      participants: [senderId, targetId],
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      lastMessage: "",
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      participantIds: {
-        [senderId]: true,
-        [targetId]: true
-      }
+  if (doc.exists) {
+    return res.status(200).json({
+      success: true,
+      message: "Chat room already exists",
+      data: { roomId, alreadyExisted: true }
     });
   }
 
-  res.status(200).json({ 
+  const newRoom = {
+    participants: [senderId, targetId],
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    lastMessage: {
+      text: "Chat started",
+      senderId: senderId,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    participantIds: [senderId, targetId], 
+  };
+
+  await roomRef.set(newRoom);
+
+  res.status(201).json({ 
     success: true, 
-    data: { roomId } 
+    message: "New chat room created",
+    data: { roomId, alreadyExisted: false } 
   });
 });
 
@@ -156,7 +173,6 @@ exports.getChatHistory = asyncHandler(async (req, res) => {
   const { roomId } = req.params;
   const limit = parseInt(req.query.limit) || 20;
 
-  // Query Firestore via Admin SDK
   const messagesSnapshot = await db.collection("rooms")
     .doc(roomId)
     .collection("messages")

@@ -118,6 +118,57 @@ exports.updateProfileImage = asyncHandler(async (req, res) => {
   });
 });
 
+// exports.createChatRoom = asyncHandler(async (req, res) => {
+//   const { receiverId } = req.body;
+//   const senderId = req.user._id.toString();
+
+//   if (!receiverId) {
+//     res.status(400);
+//     throw new Error("Receiver ID is required");
+//   }
+
+//   const targetId = receiverId.toString();
+
+//   if (senderId === targetId) {
+//     res.status(400);
+//     throw new Error("You cannot create a chat room with yourself");
+//   }
+
+//   const roomId = [senderId, targetId].sort().join("_");
+
+//   const roomRef = db.collection("rooms").doc(roomId);
+
+//   const doc = await roomRef.get();
+
+//   if (doc.exists) {
+//     return res.status(200).json({
+//       success: true,
+//       message: "Chat room already exists",
+//       data: { roomId, alreadyExisted: true }
+//     });
+//   }
+
+//   const newRoom = {
+//     participants: [senderId, targetId],
+//     createdAt: admin.firestore.FieldValue.serverTimestamp(),
+//     lastMessage: {
+//       text: "Chat started",
+//       senderId: senderId,
+//       timestamp: admin.firestore.FieldValue.serverTimestamp(),
+//     },
+//     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+//     participantIds: [senderId, targetId], 
+//   };
+
+//   await roomRef.set(newRoom);
+
+//   res.status(201).json({ 
+//     success: true, 
+//     message: "New chat room created",
+//     data: { roomId, alreadyExisted: false } 
+//   });
+// });
+
 exports.createChatRoom = asyncHandler(async (req, res) => {
   const { receiverId } = req.body;
   const senderId = req.user._id.toString();
@@ -134,10 +185,42 @@ exports.createChatRoom = asyncHandler(async (req, res) => {
     throw new Error("You cannot create a chat room with yourself");
   }
 
+  // --- NEW: Firebase Existence Check ---
+  const checkAndRegisterFirebase = async (mongoUser) => {
+    try {
+      // Check if user exists in Firebase
+      return await admin.auth().getUser(mongoUser._id.toString());
+    } catch (error) {
+      if (error.code === 'auth/user-not-found') {
+        // Register the user in Firebase if they exist in Mongo but not Firebase
+        return await admin.auth().createUser({
+          uid: mongoUser._id.toString(),
+          email: mongoUser.email,
+          displayName: mongoUser.name,
+          // Since we don't have the plain text password here, we omit it. 
+          // They can still login via custom tokens.
+        });
+      }
+      throw error;
+    }
+  };
+
+  // Ensure both users exist in Firebase
+  const receiverUser = await User.findById(targetId);
+  if (!receiverUser) {
+    res.status(404);
+    throw new Error("Receiver does not exist in our database");
+  }
+
+  // Run checks for both (Sender is req.user, Receiver is receiverUser)
+  await Promise.all([
+    checkAndRegisterFirebase(req.user),
+    checkAndRegisterFirebase(receiverUser)
+  ]);
+
+  // --- Existing Room Logic ---
   const roomId = [senderId, targetId].sort().join("_");
-
   const roomRef = db.collection("rooms").doc(roomId);
-
   const doc = await roomRef.get();
 
   if (doc.exists) {

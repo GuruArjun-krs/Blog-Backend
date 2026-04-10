@@ -7,7 +7,8 @@ const {
   getUserById,
   updateProfileImage,
   createChatRoom,
-  getUserChatList
+  getUserChatList,
+  getChatHistory
 } = require("../controllers/userController");
 const { upload } = require("../config/cloudinary");
 const { protect } = require("../middleware/authMiddleware");
@@ -21,6 +22,8 @@ router.put(
 );
 router.post("/rooms", protect, createChatRoom);
 router.get("/chats/list", protect, getUserChatList);
+router.get("/rooms/:roomId/messages", protect, getChatHistory);
+
 router
   .route("/:id")
   .get(protect, getUserById)    

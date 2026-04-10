@@ -20,11 +20,11 @@ router.put(
   updateProfileImage
 );
 router.post("/rooms", protect, createChatRoom);
+router.get("/chats/list", protect, getUserChatList);
 router
   .route("/:id")
   .get(protect, getUserById)    
   .put(protect, updateUser)
   .delete(protect, deleteUser);
-  router.get("/chats/list", protect, getUserChatList);
 
 module.exports = router;

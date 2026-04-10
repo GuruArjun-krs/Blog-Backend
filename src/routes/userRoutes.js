@@ -6,7 +6,8 @@ const {
   deleteUser,
   getUserById,
   updateProfileImage,
-  createChatRoom
+  createChatRoom,
+  getUserChatList
 } = require("../controllers/userController");
 const { upload } = require("../config/cloudinary");
 const { protect } = require("../middleware/authMiddleware");
@@ -24,5 +25,6 @@ router
   .get(protect, getUserById)    
   .put(protect, updateUser)
   .delete(protect, deleteUser);
+  router.get("/chats/list", protect, getUserChatList);
 
 module.exports = router;

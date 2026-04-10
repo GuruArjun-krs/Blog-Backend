@@ -187,3 +187,40 @@ exports.getChatHistory = asyncHandler(async (req, res) => {
 
   res.status(200).json({ success: true, data: messages });
 });
+
+exports.getUserChatList = asyncHandler(async (req, res) => {
+  const userId = req.user._id.toString();
+
+  const roomsSnapshot = await db.collection("rooms")
+    .where("participantIds", "array-contains", userId)
+    .orderBy("updatedAt", "desc")
+    .get();
+
+  if (roomsSnapshot.empty) {
+    return res.status(200).json({ success: true, data: [] });
+  }
+
+  const chatList = await Promise.all(
+    roomsSnapshot.docs.map(async (doc) => {
+      const roomData = doc.data();
+      
+      const otherUserId = roomData.participantIds.find(id => id !== userId);
+
+      const otherUser = await User.findById(otherUserId)
+        .select("name profileImg nickname")
+        .lean();
+
+      return {
+        roomId: doc.id,
+        lastMessage: roomData.lastMessage,
+        updatedAt: roomData.updatedAt,
+        otherUser: otherUser || { name: "Unknown User", profileImg: "" },
+      };
+    })
+  );
+
+  res.status(200).json({
+    success: true,
+    data: chatList,
+  });
+});
